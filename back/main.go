@@ -1,13 +1,22 @@
 package main
 
 import (
-	"cafe_main/pkg/auth"
+	"cafe_main/internal/auth"
+	"cafe_main/internal/logger"
 
 	"github.com/gin-gonic/gin"
 )
 
 func main() {
+	logger := logger.GetLogger()
+
+	auth.NewAuthStorage("./auth.db", logger)
+
 	router := gin.Default()
+
+	router.POST("/login", func(c *gin.Context) {
+
+	})
 
 	v1 := router.Group("/v1")
 	v1.Use(auth.AuthMiddleware)

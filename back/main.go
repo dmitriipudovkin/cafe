@@ -3,6 +3,7 @@ package main
 import (
 	"cafe_main/internal/auth"
 	"cafe_main/internal/logger"
+	"strings"
 
 	"os"
 
@@ -43,11 +44,33 @@ func main() {
 			return
 		}
 
-		c.JSON(200, gin.H{"token": tokenString})
+		c.JSON(200, gin.H{"access_token": tokenString.AccessToken, "refresh_token": tokenString.RefreshToken})
 	})
 
+	AuthMiddleware := func(c *gin.Context) {
+		authHeader := c.GetHeader("Authorization")
+
+		if authHeader == "" {
+			c.JSON(401, gin.H{"error": "Missing Authorization header"})
+			c.Abort()
+			return
+		}
+
+		tokenString := strings.Split(authHeader, " ")[1]
+
+		_, err := authServices.CheckToken(tokenString)
+
+		if err != nil {
+			c.JSON(401, gin.H{"error": "Invalid token"})
+			c.Abort()
+			return
+		}
+
+		c.Next()
+	}
+
 	v1 := router.Group("/v1")
-	v1.Use(auth.AuthMiddleware)
+	v1.Use(AuthMiddleware)
 	v1.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{
 			"message": "pong",

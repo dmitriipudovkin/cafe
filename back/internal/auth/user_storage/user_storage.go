@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"os"
 
+	"github.com/google/uuid"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -16,7 +17,7 @@ type UserStorage struct {
 }
 
 type User struct {
-	ID       int    `json:"id"`
+	ID       string `json:"id"`
 	Name     string `json:"name"`
 	Password string `json:"password"`
 	IsAdmin  bool   `json:"is_admin"`
@@ -24,8 +25,9 @@ type User struct {
 
 func (UserStorage *UserStorage) CreateUser(db *sql.DB, name string, password string, isAdmin bool) error {
 	hashedPassword, _ := UserStorage.hasher.Hash(password)
+	id := uuid.New().String()
 
-	_, err := db.Exec("INSERT INTO users (name, password, is_admin) VALUES (?, ?, ?)", name, hashedPassword, isAdmin)
+	_, err := db.Exec("INSERT INTO users (id, name, password, is_admin) VALUES (?, ?, ?, ?)", id, name, hashedPassword, isAdmin)
 	return err
 }
 
@@ -61,7 +63,7 @@ func InitUserStorage(dbPath string, logger logger.Logger, hasher hash.HasherInte
 	// Create a table
 	_, err = db.Exec(`
 		CREATE TABLE IF NOT EXISTS users (
-			id INTEGER PRIMARY KEY,
+			id TEXT PRIMARY KEY,
 			name TEXT,
 			password TEXT,
 			is_admin BOOLEAN

@@ -1,10 +1,12 @@
 package auth
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
 	"cafe_main/internal/auth/hash"
+	sessionStorage "cafe_main/internal/auth/session_storage"
 	"cafe_main/internal/auth/token"
 	userStorage "cafe_main/internal/auth/user_storage"
 	"cafe_main/internal/logger"
@@ -24,8 +26,9 @@ type AuthServiceUserStorage interface {
 
 // TO DO Добавить сессии
 type AuthServiceSessionStorage interface {
-	CreateSession() error
-	DeleteSession() error
+	CreateSession(id string, accessToken string, refreshToken string) error
+	GetAccessToken(id string) (string, error)
+	GetRefreshToken(id string) (string, error)
 }
 
 type AuthServiceInterface interface {
@@ -34,12 +37,14 @@ type AuthServiceInterface interface {
 
 type Tokenizer interface {
 	GetToken(claims map[string]interface{}) (string, error)
+	VerifyToken(tokenString string) (token.TokenClaims, error)
 }
 
 type AuthService struct {
-	authStorage AuthServiceUserStorage
-	tokenizer   Tokenizer
-	hasher      *hash.Hasher
+	authStorage    AuthServiceUserStorage
+	sessionStorage AuthServiceSessionStorage
+	tokenizer      Tokenizer
+	hasher         *hash.Hasher
 }
 
 func NewAuthService(dbPath string, logger logger.Logger, secret string) (AuthService, error) {
@@ -48,8 +53,15 @@ func NewAuthService(dbPath string, logger logger.Logger, secret string) (AuthSer
 
 	authStorage, err := userStorage.InitUserStorage(dbPath, logger, hasher)
 
+	if err != nil {
+		return AuthService{}, err
+	}
+
+	sessionStorage, err := sessionStorage.NewSessionStorage()
+
 	authService := AuthService{
 		authStorage,
+		sessionStorage,
 		tokenizer,
 		hasher,
 	}
@@ -57,28 +69,71 @@ func NewAuthService(dbPath string, logger logger.Logger, secret string) (AuthSer
 	return authService, err
 }
 
-func (as *AuthService) Login(name string, password string) (string, error) {
+type Token struct {
+	AccessToken  string
+	RefreshToken string
+}
+
+func (as *AuthService) Login(name string, password string) (Token, error) {
 	hashedPassword, err := as.hasher.Hash(password)
 	if err != nil {
-		return "", err
+		return Token{}, err
 	}
 
 	user, err := as.authStorage.GetUserByCredentials(name, hashedPassword)
 
 	if err != nil {
-		return "", err
+		return Token{}, err
 	}
 
+	now := time.Now()
+
 	claim := map[string]any{
+		"sub":      user.ID,
 		"username": user.Name,
-		"exp":      time.Now().Add(time.Hour * 72).Unix(),
+		"exp":      now.Add(time.Hour * 72).Unix(),
+		"created":  now.Unix(),
 	}
 
 	token, err := as.tokenizer.GetToken(claim)
 
 	if err != nil {
-		return "", err
+		return Token{}, err
 	}
 
-	return token, err
+	refreshClaim := map[string]any{
+		"exp":     now.Add(time.Hour * 72).Unix(),
+		"created": now.Unix(),
+	}
+
+	refreshToken, err := as.tokenizer.GetToken(refreshClaim)
+
+	as.sessionStorage.CreateSession(user.ID, token, refreshToken)
+
+	return Token{
+		AccessToken:  token,
+		RefreshToken: refreshToken,
+	}, err
+}
+
+func (as *AuthService) CheckToken(token string) (bool, error) {
+	claims, err := as.tokenizer.VerifyToken(token)
+
+	if err != nil {
+		return false, err
+	}
+
+	if claims["exp"].(float64) < float64(time.Now().Unix()) {
+		return false, errors.New("token expired")
+	}
+
+	userID := claims["sub"].(string)
+
+	_, err = as.sessionStorage.GetAccessToken(userID)
+
+	if err != nil {
+		return false, errors.New("session not found")
+	}
+
+	return true, nil
 }

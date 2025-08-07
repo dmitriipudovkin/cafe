@@ -13,12 +13,13 @@ type SessionStorage struct {
 	client *redis.Client
 }
 
-func NewSessionStorage() (*SessionStorage, error) {
-	client := redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379", // Redis address
-		Password: "",               // Redis password
-		DB:       0,                // Redis database
-	})
+type SessionStorageOptions = redis.Options
+
+const AccessTokenPrefix = "_access_token"
+const RefreshTokenPrefix = "_refresh_token"
+
+func NewSessionStorage(options SessionStorageOptions) (*SessionStorage, error) {
+	client := redis.NewClient(&options)
 
 	err := client.Ping(context.Background()).Err()
 
@@ -31,12 +32,12 @@ func (s *SessionStorage) CreateSession(id string, accessToken string, refreshTok
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	err := s.client.Set(ctx, id+"_access_token", accessToken, time.Hour*72).Err()
+	err := s.client.Set(ctx, id+AccessTokenPrefix, accessToken, time.Hour*72).Err()
 
 	if err != nil {
 		return err
 	}
-	err = s.client.Set(ctx, id+"_refresh_token", refreshToken, time.Hour*72).Err()
+	err = s.client.Set(ctx, id+RefreshTokenPrefix, refreshToken, time.Hour*72).Err()
 
 	return err
 }
@@ -45,12 +46,35 @@ func (s *SessionStorage) GetAccessToken(id string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	return s.client.Get(ctx, id+"_access_token").Result()
+	return s.client.Get(ctx, id+AccessTokenPrefix).Result()
 }
 
 func (s *SessionStorage) GetRefreshToken(id string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	return s.client.Get(ctx, id+"_refresh_token").Result()
+	return s.client.Get(ctx, id+RefreshTokenPrefix).Result()
+}
+
+func (s *SessionStorage) GetSession(id string) (string, string, error) {
+	accessToken, err := s.GetAccessToken(id)
+
+	if err != nil {
+		return "", "", err
+	}
+
+	refreshToken, err := s.GetRefreshToken(id)
+
+	if err != nil {
+		return "", "", err
+	}
+
+	return accessToken, refreshToken, nil
+}
+
+func (s *SessionStorage) DeleteSession(id string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	return s.client.Del(ctx, id+AccessTokenPrefix, id+RefreshTokenPrefix).Err()
 }

@@ -15,11 +15,28 @@ type User struct {
 	Password string `json:"password"`
 }
 
+type RefreshToken struct {
+	RefreshToken string `json:"refresh_token"`
+}
+
 func main() {
 	logger := logger.GetLogger()
 	secretKey := os.Getenv("SECRET_KEY")
 
-	authServices, err := auth.NewAuthService("./auth.db", logger, secretKey)
+	dbOptions := &auth.DBOptions{
+		UserStorage: auth.UserStorageOptions{
+			DBPath:        os.Getenv("USER_DB_PATH"),
+			AdminLogin:    os.Getenv("ADMIN_LOGIN"),
+			AdminPassword: os.Getenv("ADMIN_PASSWORD"),
+		},
+		SessionStorage: auth.SessionStorageOptions{
+			Addr:     os.Getenv("REDIS_ADDR"),
+			Password: "",
+			DB:       0,
+		},
+	}
+
+	authServices, err := auth.NewAuthService(dbOptions, logger, secretKey)
 
 	if err != nil {
 		logger.Fatal(err)
@@ -45,6 +62,30 @@ func main() {
 		}
 
 		c.JSON(200, gin.H{"access_token": tokenString.AccessToken, "refresh_token": tokenString.RefreshToken})
+	})
+
+	router.POST("/logout", func(c *gin.Context) {
+
+		c.JSON(200, gin.H{"message": "Logout successful"})
+	})
+
+	router.POST("/refresh", func(c *gin.Context) {
+		var refreshToken RefreshToken
+		err := c.BindJSON(&refreshToken)
+
+		if err != nil {
+			c.JSON(400, gin.H{"error": "Invalid request"})
+			return
+		}
+
+		tokens, err := authServices.RefreshToken(refreshToken.RefreshToken)
+
+		if err != nil {
+			c.JSON(401, gin.H{"error": "Invalid refresh token"})
+			return
+		}
+
+		c.JSON(200, gin.H{"access_token": tokens.AccessToken, "refresh_token": tokens.RefreshToken})
 	})
 
 	AuthMiddleware := func(c *gin.Context) {

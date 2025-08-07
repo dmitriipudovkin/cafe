@@ -4,6 +4,7 @@ import (
 	"cafe_main/internal/auth/hash"
 	"cafe_main/internal/logger"
 	"database/sql"
+	"errors"
 	"os"
 
 	"github.com/google/uuid"
@@ -36,7 +37,7 @@ func (UserStorage *UserStorage) CheckPassword(name string, password string) (boo
 	if err != nil {
 		return false, err
 	}
-	return true, err
+	return true, nil
 }
 
 func (UserStorage *UserStorage) GetUserByCredentials(name string, password string) (*User, error) {
@@ -45,15 +46,21 @@ func (UserStorage *UserStorage) GetUserByCredentials(name string, password strin
 	var user User
 	err := row.Scan(&user.ID, &user.Name, &user.Password, &user.IsAdmin)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("invalid credentials")
 	}
 
 	return &user, nil
 }
 
-func InitUserStorage(dbPath string, logger logger.Logger, hasher hash.HasherInterface) (*UserStorage, error) {
+type UserStorageOptions struct {
+	DBPath        string
+	AdminLogin    string
+	AdminPassword string
+}
+
+func InitUserStorage(dbOptions UserStorageOptions, logger logger.Logger, hasher hash.HasherInterface) (*UserStorage, error) {
 	// TO DO путь считается от корня(
-	db, err := sql.Open("sqlite3", dbPath)
+	db, err := sql.Open("sqlite3", dbOptions.DBPath)
 	if err != nil {
 		logger.Fatal(err)
 		os.Exit(1)
@@ -87,7 +94,7 @@ func InitUserStorage(dbPath string, logger logger.Logger, hasher hash.HasherInte
 		os.Exit(1)
 	} else if !adminExists {
 		logger.Info("Creating admin")
-		err = res.CreateUser(db, "admin", "admin", true)
+		err = res.CreateUser(db, dbOptions.AdminLogin, dbOptions.AdminPassword, true)
 
 		if err != nil {
 			logger.Fatal(err)

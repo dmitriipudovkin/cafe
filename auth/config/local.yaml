@@ -1,0 +1,23 @@
+env: "local"
+
+redis:
+  addr: "localhost:6379"
+  password: ""
+  db: 0
+
+user_storage_path: "./storage/auth_test.db"
+
+admin_login: "admin"
+admin_password: "password"
+
+secret_key: "secret_key"
+
+port: "8080"
+
+log_level: "debug"
+
+hasher: "sha256"
+
+grpc:
+  port: 44044
+  timeout: 5m

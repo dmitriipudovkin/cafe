@@ -1,4 +1,4 @@
-module cafe_main
+module auth
 
 go 1.24.5
 
@@ -11,12 +11,14 @@ require (
 
 require (
 	github.com/BurntSushi/toml v1.5.0 // indirect
-	github.com/cespare/xxhash/v2 v2.1.2 // indirect
+	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/ilyakaznacheev/cleanenv v1.5.0 // indirect
 	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250528174236-200df99c418a // indirect
+	google.golang.org/grpc v1.74.2 // indirect
 	olympos.io/encoding/edn v0.0.0-20201019073823-d3554ca0b0a3 // indirect
 )
 
@@ -24,6 +26,7 @@ require (
 	github.com/bytedance/sonic v1.13.3 // indirect
 	github.com/bytedance/sonic/loader v0.3.0 // indirect
 	github.com/cloudwego/base64x v0.1.5 // indirect
+	github.com/dmitriipudovkin/cafe v0.0.0-20250812194332-9ffeadd27b7c
 	github.com/gabriel-vasile/mimetype v1.4.9 // indirect
 	github.com/gin-contrib/sse v1.1.0 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect

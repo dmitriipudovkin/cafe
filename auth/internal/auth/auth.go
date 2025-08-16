@@ -5,11 +5,11 @@ import (
 	"maps"
 	"time"
 
-	"cafe_main/internal/auth/hash"
-	sessionStorage "cafe_main/internal/auth/session_storage"
-	"cafe_main/internal/auth/token"
-	userStorage "cafe_main/internal/auth/user_storage"
-	"cafe_main/internal/logger"
+	"auth/internal/auth/hash"
+	sessionStorage "auth/internal/auth/session_storage"
+	"auth/internal/auth/token"
+	userStorage "auth/internal/auth/user_storage"
+	"auth/internal/logger"
 )
 
 type AuthServiceUserStorage interface {

@@ -1,8 +1,8 @@
 package userStorage
 
 import (
-	"cafe_main/internal/auth/hash"
-	"cafe_main/internal/logger"
+	"auth/internal/auth/hash"
+	"auth/internal/logger"
 	"database/sql"
 	"errors"
 	"os"

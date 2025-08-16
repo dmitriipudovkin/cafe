@@ -1,19 +1,32 @@
 package main
 
 import (
-	"cafe_main/internal/config"
-	"fmt"
+	"auth/internal/app"
+	"auth/internal/config"
+	"auth/internal/logger"
+	"os"
+	"os/signal"
+	"syscall"
+
+	"github.com/joho/godotenv"
 )
 
 func main() {
-	// TODO: инит конфига
+	godotenv.Load(".env")
+
 	cfg := config.MustLoad()
 
-	fmt.Println(cfg)
+	logger := logger.GetLogger()
+	logger.Info("Starting auth service")
 
-	// TODO: инит логгера
+	application := app.New(logger, cfg.Grpc.Port)
 
-	// TODO: инит приложения (app)
+	go application.GRPCServer.MustRun()
 
-	// TODO: запуск grpc
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT)
+
+	<-stop
+
+	application.GRPCServer.Stop()
 }

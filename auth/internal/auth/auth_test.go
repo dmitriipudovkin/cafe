@@ -1,7 +1,7 @@
 package auth
 
 import (
-	"cafe_main/internal/logger"
+	"auth/internal/logger"
 	"os"
 	"testing"
 

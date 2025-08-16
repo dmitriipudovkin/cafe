@@ -4,12 +4,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type Logger interface {
-	Error(args ...interface{})
-	Debug(args ...interface{})
-	Info(args ...interface{})
-	Fatal(args ...interface{})
-}
+type Logger = logrus.Logger
 
 var logger = logrus.New()
 

@@ -2,6 +2,7 @@ package config
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"time"
 
@@ -23,7 +24,7 @@ type Config struct {
 	LogLevel        string `yaml:"log_level"`
 	Hasher          string `yaml:"hasher"`
 	Grpc            struct {
-		Port    string        `yaml:"port"`
+		Port    int           `yaml:"port"`
 		Timeout time.Duration `yaml:"timeout"`
 	} `yaml:"grpc"`
 }
@@ -55,6 +56,7 @@ func fetchConfig() string {
 	flag.Parse()
 
 	if res == "" {
+		fmt.Println("Using default config path", os.Getenv("CONFIG_PATH"))
 		return os.Getenv("CONFIG_PATH")
 	}
 

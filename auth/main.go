@@ -1,8 +1,8 @@
 package main
 
 import (
-	"cafe_main/internal/auth"
-	"cafe_main/internal/logger"
+	"auth/internal/auth"
+	"auth/internal/logger"
 	"strings"
 
 	"os"

@@ -2,7 +2,7 @@ package grpcapp
 
 import (
 	authgrpc "auth/internal/grpc/auth"
-	"auth/internal/logger"
+	"auth/internal/lib/logger"
 	"fmt"
 	"net"
 
@@ -15,10 +15,10 @@ type App struct {
 	port       int
 }
 
-func New(logger *logger.Logger, port int) *App {
+func New(logger *logger.Logger, port int, authService authgrpc.Auth) *App {
 	gRPCServer := grpc.NewServer()
 
-	authgrpc.Register(gRPCServer)
+	authgrpc.Register(gRPCServer, authService)
 
 	return &App{
 		logger:     logger,

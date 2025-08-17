@@ -3,7 +3,7 @@ package main
 import (
 	"auth/internal/app"
 	"auth/internal/config"
-	"auth/internal/logger"
+	"auth/internal/lib/logger"
 	"os"
 	"os/signal"
 	"syscall"

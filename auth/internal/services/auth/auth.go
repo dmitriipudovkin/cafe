@@ -1,22 +1,21 @@
 package auth
 
 import (
+	"auth/internal/domain/models"
+	"auth/internal/lib/hash"
+	"auth/internal/lib/logger"
+	"auth/internal/lib/token"
+	sessionStorage "auth/internal/storage/session_storage"
+	userStorage "auth/internal/storage/user_storage"
 	"errors"
 	"maps"
 	"time"
-
-	"auth/internal/auth/hash"
-	sessionStorage "auth/internal/auth/session_storage"
-	"auth/internal/auth/token"
-	userStorage "auth/internal/auth/user_storage"
-	"auth/internal/logger"
 )
 
 type AuthServiceUserStorage interface {
-	GetUserByCredentials(name string, password string) (*userStorage.User, error)
+	GetUserByCredentials(name string, password string) (*models.User, error)
 }
 
-// TO DO Добавить сессии
 type AuthServiceSessionStorage interface {
 	CreateSession(id string, accessToken string, refreshToken string) error
 	GetSession(id string) (string, string, error)
@@ -40,7 +39,6 @@ type AuthService struct {
 	tokenizer      Tokenizer
 	hasher         *hash.Hasher
 }
-
 type SessionStorageOptions = sessionStorage.SessionStorageOptions
 type UserStorageOptions = userStorage.UserStorageOptions
 
@@ -49,11 +47,12 @@ type DBOptions struct {
 	SessionStorage SessionStorageOptions
 }
 
-func NewAuthService(dbOptions *DBOptions, logger logger.Logger, secret string) (AuthService, error) {
+// Вынести отдельно сторы
+func New(dbOptions *DBOptions, logger *logger.Logger, secret string) (AuthService, error) {
 	hasher := hash.NewHasher(secret)
 	tokenizer := token.NewTokenizer(secret)
 
-	authStorage, err := userStorage.InitUserStorage(dbOptions.UserStorage, logger, hasher)
+	authStorage, err := userStorage.New(dbOptions.UserStorage, logger, hasher)
 
 	if err != nil {
 		return AuthService{}, err

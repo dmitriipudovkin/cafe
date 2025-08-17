@@ -2,7 +2,8 @@ package app
 
 import (
 	grpcapp "auth/internal/app/grpc"
-	"auth/internal/logger"
+	"auth/internal/lib/logger"
+	"auth/internal/services/auth"
 )
 
 type App struct {
@@ -16,8 +17,9 @@ func New(
 	// TODO: инициализировать хранилище
 
 	// TODO: инициализировать auth сервис
+	authService := auth.New()
 
-	grpcapp := grpcapp.New(logger, grpcPort)
+	grpcapp := grpcapp.New(logger, grpcPort, authService)
 
 	return &App{
 		GRPCServer: grpcapp,

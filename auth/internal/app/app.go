@@ -2,8 +2,13 @@ package app
 
 import (
 	grpcapp "auth/internal/app/grpc"
+	"auth/internal/config"
+	"auth/internal/lib/hash"
 	"auth/internal/lib/logger"
+	"auth/internal/lib/token"
 	"auth/internal/services/auth"
+	sessionStorage "auth/internal/storage/session_storage"
+	userStorage "auth/internal/storage/user_storage"
 )
 
 type App struct {
@@ -12,14 +17,26 @@ type App struct {
 
 func New(
 	logger *logger.Logger,
-	grpcPort int,
+	config *config.Config,
 ) *App {
-	// TODO: инициализировать хранилище
+	hasher := hash.NewHasher(config.SecretKey)
+	tokenizer := token.NewTokenizer(config.SecretKey)
 
-	// TODO: инициализировать auth сервис
-	authService := auth.New()
+	userStorage := userStorage.MustRun(userStorage.UserStorageOptions{
+		DBPath:        config.UserStorage.DBPath,
+		AdminLogin:    config.UserStorage.AdminLogin,
+		AdminPassword: config.UserStorage.AdminPassword,
+	}, logger, hasher)
 
-	grpcapp := grpcapp.New(logger, grpcPort, authService)
+	sessionStorage := sessionStorage.MustRun(sessionStorage.SessionStorageOptions{
+		Addr:     config.Redis.Addr,
+		Password: config.Redis.Password,
+		DB:       config.Redis.DB,
+	})
+
+	authService := auth.MustRun(userStorage, sessionStorage, logger, hasher, tokenizer)
+
+	grpcapp := grpcapp.New(logger, config.Grpc.Port, authService)
 
 	return &App{
 		GRPCServer: grpcapp,

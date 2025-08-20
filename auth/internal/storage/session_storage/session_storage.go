@@ -18,7 +18,17 @@ type SessionStorageOptions = redis.Options
 const AccessTokenPrefix = "_access_token"
 const RefreshTokenPrefix = "_refresh_token"
 
-func NewSessionStorage(options SessionStorageOptions) (*SessionStorage, error) {
+func MustRun(options SessionStorageOptions) *SessionStorage {
+	sessionStorage, err := New(options)
+
+	if err != nil {
+		panic(err)
+	}
+
+	return sessionStorage
+}
+
+func New(options SessionStorageOptions) (*SessionStorage, error) {
 	client := redis.NewClient(&options)
 
 	err := client.Ping(context.Background()).Err()

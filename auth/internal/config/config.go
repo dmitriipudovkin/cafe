@@ -16,14 +16,13 @@ type Config struct {
 		Password string `yaml:"password"`
 		DB       int    `yaml:"db"`
 	} `yaml:"redis"`
-	UserStoragePath string `yaml:"user_storage_path" env-required:"true"`
-	AdminLogin      string `yaml:"admin_login"`
-	AdminPassword   string `yaml:"admin_password"`
-	SecretKey       string `yaml:"secret_key"`
-	Port            string `yaml:"port"`
-	LogLevel        string `yaml:"log_level"`
-	Hasher          string `yaml:"hasher"`
-	Grpc            struct {
+	UserStorage struct {
+		DBPath        string `yaml:"path"`
+		AdminLogin    string `yaml:"admin_login"`
+		AdminPassword string `yaml:"admin_password"`
+	} `yaml:"user_storage"`
+	SecretKey string `yaml:"secret_key"`
+	Grpc      struct {
 		Port    int           `yaml:"port"`
 		Timeout time.Duration `yaml:"timeout"`
 	} `yaml:"grpc"`

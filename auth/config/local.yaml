@@ -5,10 +5,10 @@ redis:
   password: ""
   db: 0
 
-user_storage_path: "./storage/auth_test.db"
-
-admin_login: "admin"
-admin_password: "password"
+user_storage:
+  path: "./storage/auth_test.db"
+  admin_login: "admin"
+  admin_password: "admin"
 
 secret_key: "secret_key"
 

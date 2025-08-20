@@ -19,7 +19,7 @@ func main() {
 	logger := logger.GetLogger()
 	logger.Info("Starting auth service")
 
-	application := app.New(logger, cfg.Grpc.Port)
+	application := app.New(logger, cfg)
 
 	go application.GRPCServer.MustRun()
 

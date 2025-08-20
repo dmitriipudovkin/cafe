@@ -2,7 +2,6 @@ package hash
 
 import (
 	"crypto/sha1"
-	"fmt"
 )
 
 type HasherInterface interface {
@@ -18,7 +17,6 @@ func NewHasher(salt string) *Hasher {
 }
 
 func (h *Hasher) Hash(str string) (string, error) {
-	fmt.Println(str)
 	hash := sha1.New()
 	if _, err := hash.Write([]byte(str)); err != nil {
 		return "", err

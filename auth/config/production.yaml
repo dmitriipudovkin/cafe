@@ -1,0 +1,21 @@
+env: "prod"
+
+redis:
+  addr: "redis:6379"
+  password: ""
+  db: 0
+
+user_storage:
+  path: "./storage/auth.db"
+  admin_login: "admin"
+  admin_password: "admin"
+
+secret_key: "change_me_in_prod"
+
+log_level: "info"
+
+hasher: "sha256"
+
+grpc:
+  port: 44044
+  timeout: 5m

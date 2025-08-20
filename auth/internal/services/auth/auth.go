@@ -9,7 +9,6 @@ import (
 	userStorage "auth/internal/storage/user_storage"
 	"context"
 	"errors"
-	"fmt"
 	"maps"
 	"time"
 )
@@ -70,20 +69,15 @@ var (
 )
 
 func (as *AuthService) Login(ctx context.Context, login string, password string) (auth.Token, error) {
-	fmt.Println("Login")
-	fmt.Println(login, password)
 	hashedPassword, err := as.hasher.Hash(password)
 
-	fmt.Println(login, hashedPassword)
 	if err != nil {
 		return auth.Token{}, err
 	}
 
 	user, err := as.userStorage.GetUserByCredentials(login, hashedPassword)
-	fmt.Println(user, err)
 
 	if err != nil {
-		fmt.Println(auth.Token{}, err)
 		return auth.Token{}, err
 	}
 

@@ -1,30 +1,16 @@
-# Не доделал
-variables:
-  REDIS_PORT: 6379
-
 services:
-  go-program:
+  auth:
     build:
-      context: .
-      dockerfile: ./back/Dockerfile
+      context: ./auth
+      dockerfile: Dockerfile
+    environment:
+      - CONFIG_PATH=/app/config/production.yaml
     ports:
-      - "8080:8080"
-    volumes:
-      - ./back:/app
+      - "44044:44044"
     depends_on:
       - redis
-      - postgres
 
   redis:
     image: redis:alpine
     ports:
       - "6379:6379"
-
-  postgres:
-    image: postgres:alpine
-    environment:
-      - POSTGRES_USER=myuser
-      - POSTGRES_PASSWORD=mypassword
-      - POSTGRES_DB=mydb
-    ports:
-      - "5432:5432"

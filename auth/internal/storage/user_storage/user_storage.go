@@ -6,11 +6,12 @@ import (
 	"auth/internal/lib/logger"
 	"database/sql"
 	"errors"
-	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/google/uuid"
-	_ "github.com/mattn/go-sqlite3"
+	// _ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 )
 
 type UserStorage struct {
@@ -40,7 +41,14 @@ func MustRun(dbOptions UserStorageOptions, logger *logger.Logger, hasher *hash.H
 }
 
 func New(dbOptions UserStorageOptions, logger *logger.Logger, hasher *hash.Hasher) (*UserStorage, error) {
-	db, err := sql.Open("sqlite3", dbOptions.DBPath)
+	// Ensure parent directory exists
+	dir := filepath.Dir(dbOptions.DBPath)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		logger.Fatal(err)
+		os.Exit(1)
+	}
+
+	db, err := sql.Open("sqlite", dbOptions.DBPath)
 	if err != nil {
 		logger.Fatal(err)
 		os.Exit(1)
@@ -92,7 +100,6 @@ func (UserStorage *UserStorage) Stop() {
 
 func (UserStorage *UserStorage) CreateUser(db *sql.DB, name string, password string, isAdmin bool) error {
 	hashedPassword, _ := UserStorage.hasher.Hash(password)
-	fmt.Println(password, hashedPassword)
 	id := uuid.New().String()
 
 	_, err := db.Exec("INSERT INTO users (id, name, password, is_admin) VALUES (?, ?, ?, ?)", id, name, hashedPassword, isAdmin)
@@ -109,10 +116,8 @@ func (UserStorage *UserStorage) CheckPassword(name string, password string) (boo
 
 func (UserStorage *UserStorage) GetUserByCredentials(name string, password string) (*models.User, error) {
 	row := UserStorage.db.QueryRow("SELECT * FROM users WHERE name = ? AND password = ?", name, password)
-	fmt.Println(row)
 	var user models.User
 	err := row.Scan(&user.ID, &user.Name, &user.Password, &user.IsAdmin)
-	fmt.Println(user, err)
 	if err != nil {
 		return nil, ErrInvalidCredentials
 	}

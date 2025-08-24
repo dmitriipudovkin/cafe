@@ -40,10 +40,12 @@ func MustRun(dbOptions UserStorageOptions, logger *logger.Logger, hasher *hash.H
 	return sessionStorage
 }
 
+const FileMod = 0o755
+
 func New(dbOptions UserStorageOptions, logger *logger.Logger, hasher *hash.Hasher) (*UserStorage, error) {
 	// Ensure parent directory exists
 	dir := filepath.Dir(dbOptions.DBPath)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, FileMod); err != nil {
 		logger.Fatal(err)
 		os.Exit(1)
 	}
@@ -94,28 +96,39 @@ func New(dbOptions UserStorageOptions, logger *logger.Logger, hasher *hash.Hashe
 	return res, nil
 }
 
-func (UserStorage *UserStorage) Stop() {
-	UserStorage.db.Close()
+func (us *UserStorage) Stop() {
+	err := us.db.Close()
+
+	if err != nil {
+		us.logger.Fatal(err)
+		os.Exit(1)
+	}
 }
 
-func (UserStorage *UserStorage) CreateUser(db *sql.DB, name string, password string, isAdmin bool) error {
-	hashedPassword, _ := UserStorage.hasher.Hash(password)
+func (us *UserStorage) CreateUser(db *sql.DB, name string, password string, isAdmin bool) error {
+	hashedPassword, _ := us.hasher.Hash(password)
 	id := uuid.New().String()
 
-	_, err := db.Exec("INSERT INTO users (id, name, password, is_admin) VALUES (?, ?, ?, ?)", id, name, hashedPassword, isAdmin)
+	_, err := db.Exec(
+		"INSERT INTO users (id, name, password, is_admin) VALUES (?, ?, ?, ?)",
+		id,
+		name,
+		hashedPassword,
+		isAdmin,
+	)
 	return err
 }
 
-func (UserStorage *UserStorage) CheckPassword(name string, password string) (bool, error) {
-	_, err := UserStorage.GetUserByCredentials(name, password)
+func (us *UserStorage) CheckPassword(name string, password string) (bool, error) {
+	_, err := us.GetUserByCredentials(name, password)
 	if err != nil {
 		return false, err
 	}
 	return true, nil
 }
 
-func (UserStorage *UserStorage) GetUserByCredentials(name string, password string) (*models.User, error) {
-	row := UserStorage.db.QueryRow("SELECT * FROM users WHERE name = ? AND password = ?", name, password)
+func (us *UserStorage) GetUserByCredentials(name string, password string) (*models.User, error) {
+	row := us.db.QueryRow("SELECT * FROM users WHERE name = ? AND password = ?", name, password)
 	var user models.User
 	err := row.Scan(&user.ID, &user.Name, &user.Password, &user.IsAdmin)
 	if err != nil {

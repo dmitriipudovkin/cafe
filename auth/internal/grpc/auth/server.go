@@ -1,7 +1,10 @@
 package auth
 
 import (
+	"auth/internal/domain/models"
+	"auth/internal/services/auth"
 	"context"
+	"errors"
 
 	authv1 "github.com/dmitriipudovkin/cafe/protos/gen/go/auth"
 	"google.golang.org/grpc"
@@ -21,8 +24,8 @@ type Token struct {
 }
 
 type Auth interface {
-	Login(ctx context.Context, login string, password string) (Token, error)
-	RefreshToken(ctx context.Context, refreshToken string) (Token, error)
+	Login(ctx context.Context, login string, password string) (*models.Token, error)
+	RefreshToken(ctx context.Context, refreshToken string) (*models.Token, error)
 	Logout(ctx context.Context, refreshToken string) error
 }
 
@@ -48,6 +51,9 @@ func (s *serverAPI) Login(ctx context.Context, req *authv1.LoginRequest) (*authv
 	token, err := s.auth.Login(ctx, req.GetLogin(), req.GetPassword())
 
 	if err != nil {
+		if errors.Is(err, auth.ErrInvalidCredentials) {
+			return nil, status.Error(codes.InvalidArgument, "invalid login or password")
+		}
 		return nil, status.Error(codes.Internal, "internal error")
 	}
 

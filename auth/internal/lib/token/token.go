@@ -35,5 +35,5 @@ func (t *Tokenizer) VerifyToken(tokenString string) (TokenClaims, error) {
 		return claims, nil
 	}
 
-	return nil, errors.New("Invalid token")
+	return nil, errors.New("invalid token")
 }

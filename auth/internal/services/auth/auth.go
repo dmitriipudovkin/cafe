@@ -2,7 +2,6 @@ package auth
 
 import (
 	"auth/internal/domain/models"
-	"auth/internal/grpc/auth"
 	"auth/internal/lib/hash"
 	"auth/internal/lib/logger"
 	"auth/internal/lib/token"
@@ -53,7 +52,18 @@ type SessionStorage interface {
 	DeleteSession(id string) error
 }
 
-func MustRun(userStorage UserStorage, sessionStorage SessionStorage, logger *logger.Logger, hasher *hash.Hasher, tokenizer *token.Tokenizer) *AuthService {
+type Token struct {
+	AccessToken  string
+	RefreshToken string
+}
+
+func MustRun(
+	userStorage UserStorage,
+	sessionStorage SessionStorage,
+	logger *logger.Logger,
+	hasher *hash.Hasher,
+	tokenizer *token.Tokenizer,
+) *AuthService {
 	authService := &AuthService{
 		userStorage,
 		sessionStorage,
@@ -68,26 +78,36 @@ var (
 	ErrInvalidCredentials = userStorage.ErrInvalidCredentials
 )
 
-func (as *AuthService) Login(ctx context.Context, login string, password string) (auth.Token, error) {
+const TokenTTL = time.Hour * 72
+
+func (as *AuthService) Login(ctx context.Context, login string, password string) (*models.Token, error) {
 	hashedPassword, err := as.hasher.Hash(password)
 
 	if err != nil {
-		return auth.Token{}, err
+		return &models.Token{}, err
 	}
 
 	user, err := as.userStorage.GetUserByCredentials(login, hashedPassword)
 
 	if err != nil {
-		return auth.Token{}, err
+		return &models.Token{}, err
 	}
 
 	tokens, err := as.GetToken(ctx, user.ID, map[string]any{
 		"username": user.Name,
 	})
 
-	as.sessionStorage.CreateSession(user.ID, tokens.AccessToken, tokens.RefreshToken)
+	if err != nil {
+		return &models.Token{}, err
+	}
 
-	return auth.Token{
+	err = as.sessionStorage.CreateSession(user.ID, tokens.AccessToken, tokens.RefreshToken)
+
+	if err != nil {
+		return &models.Token{}, err
+	}
+
+	return &models.Token{
 		AccessToken:  tokens.AccessToken,
 		RefreshToken: tokens.RefreshToken,
 	}, err
@@ -105,12 +125,12 @@ func (as *AuthService) Logout(ctx context.Context, token string) error {
 	return as.sessionStorage.DeleteSession(userID)
 }
 
-func (as *AuthService) GetToken(ctx context.Context, sub string, restClaims map[string]any) (auth.Token, error) {
+func (as *AuthService) GetToken(ctx context.Context, sub string, restClaims map[string]any) (*models.Token, error) {
 	now := time.Now()
 
 	claim := map[string]any{
 		"sub":     sub,
-		"exp":     now.Add(time.Hour * 72).Unix(),
+		"exp":     now.Add(TokenTTL).Unix(),
 		"created": now,
 	}
 
@@ -119,22 +139,22 @@ func (as *AuthService) GetToken(ctx context.Context, sub string, restClaims map[
 	token, err := as.tokenizer.GetToken(claim)
 
 	if err != nil {
-		return auth.Token{}, err
+		return &models.Token{}, err
 	}
 
 	refreshClaim := map[string]any{
 		"sub":     sub,
-		"exp":     now.Add(time.Hour * 72).Unix(),
+		"exp":     now.Add(TokenTTL).Unix(),
 		"created": now,
 	}
 
 	refreshToken, err := as.tokenizer.GetToken(refreshClaim)
 
 	if err != nil {
-		return auth.Token{}, err
+		return &models.Token{}, err
 	}
 
-	return auth.Token{
+	return &models.Token{
 		AccessToken:  token,
 		RefreshToken: refreshToken,
 	}, nil
@@ -162,11 +182,11 @@ func (as *AuthService) CheckToken(ctx context.Context, token string) (bool, erro
 	return true, nil
 }
 
-func (as *AuthService) RefreshToken(ctx context.Context, passedRefreshToken string) (auth.Token, error) {
+func (as *AuthService) RefreshToken(ctx context.Context, passedRefreshToken string) (*models.Token, error) {
 	claims, err := as.tokenizer.VerifyToken(passedRefreshToken)
 
 	if err != nil {
-		return auth.Token{}, err
+		return &models.Token{}, err
 	}
 
 	userID := claims["sub"].(string)
@@ -174,27 +194,35 @@ func (as *AuthService) RefreshToken(ctx context.Context, passedRefreshToken stri
 	accessToken, refreshToken, err := as.sessionStorage.GetSession(userID)
 
 	if err != nil {
-		return auth.Token{}, err
+		return &models.Token{}, err
 	}
 
 	if passedRefreshToken != refreshToken {
-		return auth.Token{}, errors.New("invalid refresh token")
+		return &models.Token{}, errors.New("invalid refresh token")
 	}
 
 	claims, err = as.tokenizer.VerifyToken(accessToken)
 
 	if err != nil {
-		return auth.Token{}, err
+		return &models.Token{}, err
 	}
 
 	tokens, err := as.GetToken(ctx, userID, map[string]any{
 		"username": claims["username"].(string),
 	})
 
-	as.sessionStorage.CreateSession(userID, tokens.AccessToken, tokens.RefreshToken)
+	if err != nil {
+		return &models.Token{}, err
+	}
 
-	return auth.Token{
+	err = as.sessionStorage.CreateSession(userID, tokens.AccessToken, tokens.RefreshToken)
+
+	if err != nil {
+		return &models.Token{}, err
+	}
+
+	return &models.Token{
 		AccessToken:  tokens.AccessToken,
 		RefreshToken: tokens.RefreshToken,
-	}, err
+	}, nil
 }

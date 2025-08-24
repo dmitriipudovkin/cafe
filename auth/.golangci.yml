@@ -1,0 +1,48 @@
+version: "2"
+
+run:
+  timeout: 5m
+
+linters:
+  enable:
+    - errcheck
+    - goconst
+    # - gosec
+    - govet
+    - ineffassign
+    - staticcheck
+    # - revive
+    - unused
+    - errname
+    - mnd
+    - unconvert
+    - whitespace
+    - copyloopvar
+    - bodyclose
+    - goprintffuncname
+    - nestif
+    - unparam
+    - exhaustive
+    - rowserrcheck
+    - wastedassign
+    - mirror
+    - nilnil
+    - nilerr
+    - nosprintfhostport
+    - funlen
+    - nolintlint
+    - lll
+    - cyclop
+    - gocognit
+    - asciicheck
+    - testableexamples
+    - protogetter
+    # - gocritic
+    - tparallel
+    - musttag
+    - gomodguard
+    - errorlint
+    # - gochecknoglobals
+    - gochecknoinits
+    - misspell
+    - prealloc

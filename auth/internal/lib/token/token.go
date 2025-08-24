@@ -12,6 +12,10 @@ type Tokenizer struct {
 
 type TokenClaims = jwt.MapClaims
 
+var (
+	ErrInvalidToken = errors.New("invalid token")
+)
+
 func NewTokenizer(sign string) *Tokenizer {
 	return &Tokenizer{sign: sign}
 }
@@ -35,5 +39,5 @@ func (t *Tokenizer) VerifyToken(tokenString string) (TokenClaims, error) {
 		return claims, nil
 	}
 
-	return nil, errors.New("invalid token")
+	return nil, ErrInvalidToken
 }

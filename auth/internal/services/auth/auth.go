@@ -76,6 +76,7 @@ func MustRun(
 
 var (
 	ErrInvalidCredentials = userStorage.ErrInvalidCredentials
+	ErrInvalidToken       = token.ErrInvalidToken
 )
 
 const TokenTTL = time.Hour * 72
@@ -198,7 +199,7 @@ func (as *AuthService) RefreshToken(ctx context.Context, passedRefreshToken stri
 	}
 
 	if passedRefreshToken != refreshToken {
-		return &models.Token{}, errors.New("invalid refresh token")
+		return &models.Token{}, ErrInvalidToken
 	}
 
 	claims, err = as.tokenizer.VerifyToken(accessToken)

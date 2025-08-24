@@ -85,7 +85,6 @@ func (g *App) Stop() {
 
 func InterceptorLogger(l *logger.Logger) logging.Logger {
 	return logging.LoggerFunc(func(ctx context.Context, lvl logging.Level, msg string, fields ...any) {
-		fmt.Println(lvl, msg)
 		logLevel := logrus.InfoLevel
 		if lvl == logging.LevelError {
 			logLevel = logrus.ErrorLevel

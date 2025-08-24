@@ -14,7 +14,7 @@ import (
 func main() {
 	err := godotenv.Load(".env")
 
-	if err != nil {
+	if err != nil && os.Getenv("CONFIG_PATH") == "" {
 		panic("failed to load env")
 	}
 

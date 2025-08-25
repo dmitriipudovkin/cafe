@@ -57,21 +57,25 @@ func New(dbOptions UserStorageOptions, logger *logger.Logger, hasher *hash.Hashe
 		os.Exit(1)
 	}
 
-	// Create a table
-	_, err = db.Exec(`
-		CREATE TABLE IF NOT EXISTS users (
-			id TEXT PRIMARY KEY,
-			name TEXT,
-			password TEXT,
-			is_admin BOOLEAN
-		);
-	`)
+	migrator, err := NewMigrator(db)
 
 	if err != nil {
-		logger.Fatal(err)
+		logger.Fatal(fmt.Errorf("New, failed to create migrator: %w", err))
 		os.Exit(1)
-	} else {
-		logger.Info("Table created or already exists")
+	}
+
+	defer func() {
+		err := migrator.Close()
+
+		if err != nil {
+			logger.Fatalf("Failed to close migrator: %v", err)
+			os.Exit(1)
+		}
+	}()
+
+	// Применяем миграции
+	if err := migrator.Up(); err != nil {
+		logger.Fatalf("Failed to apply migrations: %v", err)
 	}
 
 	res := &UserStorage{db: db, logger: logger, hasher: hasher}

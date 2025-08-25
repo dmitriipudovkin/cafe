@@ -93,6 +93,6 @@ func InterceptorLogger(l *logger.Logger) logging.Logger {
 		if lvl == logging.LevelError {
 			logLevel = logrus.ErrorLevel
 		}
-		l.Log(logLevel, msg)
+		l.Log(logLevel, msg, fields)
 	})
 }

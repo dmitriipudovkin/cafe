@@ -6,6 +6,7 @@ import (
 	"auth/internal/lib/logger"
 	"database/sql"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -34,7 +35,7 @@ func MustRun(dbOptions UserStorageOptions, logger *logger.Logger, hasher *hash.H
 	sessionStorage, err := New(dbOptions, logger, hasher)
 
 	if err != nil {
-		panic(err)
+		panic(fmt.Errorf("MustRun: %w", err))
 	}
 
 	return sessionStorage
@@ -46,13 +47,13 @@ func New(dbOptions UserStorageOptions, logger *logger.Logger, hasher *hash.Hashe
 	// Ensure parent directory exists
 	dir := filepath.Dir(dbOptions.DBPath)
 	if err := os.MkdirAll(dir, FileMod); err != nil {
-		logger.Fatal(err)
+		logger.Fatal(fmt.Errorf("New: %w", err))
 		os.Exit(1)
 	}
 
 	db, err := sql.Open("sqlite", dbOptions.DBPath)
 	if err != nil {
-		logger.Fatal(err)
+		logger.Fatal(fmt.Errorf("New: %w", err))
 		os.Exit(1)
 	}
 
@@ -96,13 +97,8 @@ func New(dbOptions UserStorageOptions, logger *logger.Logger, hasher *hash.Hashe
 	return res, nil
 }
 
-func (us *UserStorage) Stop() {
-	err := us.db.Close()
-
-	if err != nil {
-		us.logger.Fatal(err)
-		os.Exit(1)
-	}
+func (us *UserStorage) Stop() error {
+	return us.db.Close()
 }
 
 func (us *UserStorage) CreateUser(db *sql.DB, name string, password string, isAdmin bool) error {
@@ -132,7 +128,11 @@ func (us *UserStorage) GetUserByCredentials(name string, password string) (*mode
 	var user models.User
 	err := row.Scan(&user.ID, &user.Name, &user.Password, &user.IsAdmin)
 	if err != nil {
-		return nil, ErrInvalidCredentials
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrInvalidCredentials
+		}
+
+		return nil, err
 	}
 
 	return &user, nil

@@ -51,7 +51,11 @@ func New(logger *logger.Logger, port int, authService authgrpc.Auth) *App {
 }
 
 func (g *App) MustRun() {
+	const op = "grpcapp.App.MustRun"
+	logger := g.logger.WithField("op", op)
+
 	if err := g.Run(); err != nil {
+		logger.Fatal(err)
 		panic(err)
 	}
 }

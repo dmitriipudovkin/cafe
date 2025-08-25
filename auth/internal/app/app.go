@@ -12,7 +12,8 @@ import (
 )
 
 type App struct {
-	GRPCServer *grpcapp.App
+	GRPCServer  *grpcapp.App
+	authService *auth.AuthService
 }
 
 func New(
@@ -39,6 +40,22 @@ func New(
 	grpcapp := grpcapp.New(logger, config.Grpc.Port, authService)
 
 	return &App{
-		GRPCServer: grpcapp,
+		GRPCServer:  grpcapp,
+		authService: authService,
 	}
+}
+
+func (app *App) Run() {
+	app.GRPCServer.MustRun()
+}
+
+func (app *App) Stop() error {
+	app.GRPCServer.Stop()
+	err := app.authService.Stop()
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

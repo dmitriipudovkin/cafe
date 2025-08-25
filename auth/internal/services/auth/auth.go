@@ -14,6 +14,7 @@ import (
 
 type AuthServiceUserStorage interface {
 	GetUserByCredentials(name string, password string) (*models.User, error)
+	Stop() error
 }
 
 type AuthServiceSessionStorage interface {
@@ -42,6 +43,7 @@ type AuthService struct {
 
 type UserStorage interface {
 	GetUserByCredentials(name string, password string) (*models.User, error)
+	Stop() error
 }
 
 type SessionStorage interface {
@@ -226,4 +228,8 @@ func (as *AuthService) RefreshToken(ctx context.Context, passedRefreshToken stri
 		AccessToken:  tokens.AccessToken,
 		RefreshToken: tokens.RefreshToken,
 	}, nil
+}
+
+func (as *AuthService) Stop() error {
+	return as.userStorage.Stop()
 }

@@ -51,7 +51,7 @@ func (s *serverAPI) Logout(ctx context.Context, req *emptypb.Empty) (*emptypb.Em
 			return nil, status.Error(codes.InvalidArgument, "invalid token")
 		}
 
-		return nil, status.Error(codes.Internal, "internal error")
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	return &emptypb.Empty{}, nil
@@ -69,7 +69,7 @@ func (s *serverAPI) RefreshToken(ctx context.Context, req *authv1.RefreshRequest
 			return nil, status.Error(codes.InvalidArgument, "invalid token")
 		}
 
-		return nil, status.Error(codes.Internal, "internal error")
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	return &authv1.RefreshResponse{
@@ -89,7 +89,7 @@ func (s *serverAPI) Login(ctx context.Context, req *authv1.LoginRequest) (*authv
 		if errors.Is(err, auth.ErrInvalidCredentials) {
 			return nil, status.Error(codes.InvalidArgument, "invalid login or password")
 		}
-		return nil, status.Error(codes.Internal, "internal error")
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	return &authv1.LoginResponse{

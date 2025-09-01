@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"time"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
@@ -22,11 +23,11 @@ type App struct {
 }
 
 func New(logger *logger.Logger, port int, authService authgrpc.Auth) *App {
-	loggingOpts := []logging.Option{
-		logging.WithLogOnEvents(
-			logging.PayloadReceived, logging.PayloadSent,
-		),
-	}
+	// loggingOpts := []logging.Option{
+	// 	logging.WithLogOnEvents(
+	// 		logging.PayloadReceived, logging.PayloadSent,
+	// 	),
+	// }
 
 	recoveryOpts := []recovery.Option{
 		recovery.WithRecoveryHandler(func(p interface{}) (err error) {
@@ -37,8 +38,9 @@ func New(logger *logger.Logger, port int, authService authgrpc.Auth) *App {
 	}
 
 	gRPCServer := grpc.NewServer(grpc.ChainUnaryInterceptor(
+		grpc.UnaryServerInterceptor(LoggingInterceptor(logger)),
 		recovery.UnaryServerInterceptor(recoveryOpts...),
-		logging.UnaryServerInterceptor(InterceptorLogger(logger), loggingOpts...),
+		// logging.UnaryServerInterceptor(InterceptorLogger(logger)), // loggingOpts...
 	))
 
 	authgrpc.Register(gRPCServer, authService)
@@ -95,4 +97,23 @@ func InterceptorLogger(l *logger.Logger) logging.Logger {
 		}
 		l.Log(logLevel, msg, fields)
 	})
+}
+
+func LoggingInterceptor(l *logger.Logger) grpc.UnaryServerInterceptor {
+	return func(ctx context.Context, req interface{},
+		info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+		now := time.Now().UTC()
+		resp, err := handler(ctx, req)
+
+		if err != nil {
+			st, _ := status.FromError(err)
+			l.Errorf("%v, method: %s, error: %s, code: %d",
+				now, info.FullMethod, err.Error(), st.Code())
+		} else {
+			l.Infof("%v, method: %s",
+				now, info.FullMethod)
+		}
+
+		return resp, err
+	}
 }

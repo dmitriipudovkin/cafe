@@ -3,6 +3,7 @@ package app
 import (
 	grpcapp "auth/internal/app/grpc"
 	"auth/internal/config"
+	errfmt "auth/internal/lib/errors"
 	"auth/internal/lib/hash"
 	"auth/internal/lib/logger"
 	"auth/internal/lib/token"
@@ -50,11 +51,13 @@ func (app *App) Run() {
 }
 
 func (app *App) Stop() error {
+	const op = "app.App.Stop"
+	formatter := errfmt.NewOpErrorFormatter(op)
 	app.GRPCServer.Stop()
 	err := app.authService.Stop()
 
 	if err != nil {
-		return err
+		return formatter.Format(err)
 	}
 
 	return nil

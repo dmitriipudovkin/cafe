@@ -3,6 +3,8 @@ package token
 import (
 	"errors"
 
+	errfmt "auth/internal/lib/errors"
+
 	"github.com/golang-jwt/jwt"
 )
 
@@ -27,17 +29,19 @@ func (t *Tokenizer) GetToken(claims map[string]interface{}) (string, error) {
 }
 
 func (t *Tokenizer) VerifyToken(tokenString string) (TokenClaims, error) {
+	const op = "token.Tokenizer.VerifyToken"
+	formatter := errfmt.NewOpErrorFormatter(op)
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		return []byte(t.sign), nil
 	})
 
 	if err != nil {
-		return nil, err
+		return nil, formatter.Format(err)
 	}
 
 	if claims, ok := token.Claims.(TokenClaims); ok && token.Valid {
 		return claims, nil
 	}
 
-	return nil, ErrInvalidToken
+	return nil, formatter.Format(ErrInvalidToken)
 }

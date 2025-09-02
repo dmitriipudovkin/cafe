@@ -1,6 +1,7 @@
 package userStorage
 
 import (
+	"auth/internal/lib/logger"
 	"database/sql"
 	"fmt"
 	"path/filepath"
@@ -15,9 +16,10 @@ import (
 type Migrator struct {
 	db *sql.DB
 	m  *migrate.Migrate
+	l  *logger.Logger
 }
 
-func NewMigrator(db *sql.DB) (*Migrator, error) {
+func NewMigrator(db *sql.DB, l *logger.Logger) (*Migrator, error) {
 	// Инициализируем драйвер для миграций
 	driver, err := sqlite.WithInstance(db, &sqlite.Config{})
 	if err != nil {
@@ -42,6 +44,7 @@ func NewMigrator(db *sql.DB) (*Migrator, error) {
 	return &Migrator{
 		db: db,
 		m:  m,
+		l:  l,
 	}, nil
 }
 
@@ -49,7 +52,7 @@ func (m *Migrator) Up() error {
 	if err := m.m.Up(); err != nil && err != migrate.ErrNoChange {
 		return fmt.Errorf("failed to apply migrations: %w", err)
 	}
-	fmt.Println("Migrations applied successfully")
+	m.l.Info("Migrations applied successfully")
 	return nil
 }
 
@@ -57,7 +60,7 @@ func (m *Migrator) Down() error {
 	if err := m.m.Down(); err != nil && err != migrate.ErrNoChange {
 		return fmt.Errorf("failed to revert migrations: %w", err)
 	}
-	fmt.Println("Migrations reverted successfully")
+	m.l.Info("Migrations reverted successfully")
 	return nil
 }
 
@@ -65,5 +68,6 @@ func (m *Migrator) Close() error {
 	if sourceErr, dbErr := m.m.Close(); sourceErr != nil || dbErr != nil {
 		return fmt.Errorf("failed to close migrator with errors: source: %w, db: %w", sourceErr, dbErr)
 	}
-	return m.db.Close()
+	// Не закрываем соединение с базой данных здесь, так как оно будет управляться UserStorage
+	return nil
 }

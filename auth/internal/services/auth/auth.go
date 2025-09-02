@@ -2,6 +2,7 @@ package auth
 
 import (
 	"auth/internal/domain/models"
+	errfmt "auth/internal/lib/errors"
 	"auth/internal/lib/hash"
 	"auth/internal/lib/logger"
 	"auth/internal/lib/token"
@@ -79,21 +80,24 @@ func MustRun(
 var (
 	ErrInvalidCredentials = userStorage.ErrInvalidCredentials
 	ErrInvalidToken       = token.ErrInvalidToken
+	ErrSessionNotFound    = errors.New("session not found")
+	ErrTokenExpired       = errors.New("token expired")
 )
 
 const TokenTTL = time.Hour * 72
 
 func (as *AuthService) Login(ctx context.Context, login string, password string) (*models.Token, error) {
-	hashedPassword, err := as.hasher.Hash(password)
+	const op = "auth.Login"
+	errFmt := errfmt.NewOpErrorFormatter(op)
 
+	hashedPassword, err := as.hasher.Hash(password)
 	if err != nil {
-		return &models.Token{}, err
+		return &models.Token{}, errFmt.Format(err)
 	}
 
 	user, err := as.userStorage.GetUserByCredentials(login, hashedPassword)
-
 	if err != nil {
-		return &models.Token{}, err
+		return &models.Token{}, errFmt.Format(err)
 	}
 
 	tokens, err := as.GetToken(ctx, user.ID, map[string]any{
@@ -101,13 +105,12 @@ func (as *AuthService) Login(ctx context.Context, login string, password string)
 	})
 
 	if err != nil {
-		return &models.Token{}, err
+		return &models.Token{}, errFmt.Format(err)
 	}
 
 	err = as.sessionStorage.CreateSession(user.ID, tokens.AccessToken, tokens.RefreshToken)
-
 	if err != nil {
-		return &models.Token{}, err
+		return &models.Token{}, errFmt.Format(err)
 	}
 
 	return &models.Token{
@@ -117,10 +120,12 @@ func (as *AuthService) Login(ctx context.Context, login string, password string)
 }
 
 func (as *AuthService) Logout(ctx context.Context, token string) error {
-	claims, err := as.tokenizer.VerifyToken(token)
+	const op = "auth.Logout"
+	errFmt := errfmt.NewOpErrorFormatter(op)
 
+	claims, err := as.tokenizer.VerifyToken(token)
 	if err != nil {
-		return err
+		return errFmt.Format(err)
 	}
 
 	userID := claims["sub"].(string)
@@ -129,6 +134,9 @@ func (as *AuthService) Logout(ctx context.Context, token string) error {
 }
 
 func (as *AuthService) GetToken(ctx context.Context, sub string, restClaims map[string]any) (*models.Token, error) {
+	const op = "auth.GetToken"
+	errFmt := errfmt.NewOpErrorFormatter(op)
+
 	now := time.Now()
 
 	claim := map[string]any{
@@ -140,9 +148,8 @@ func (as *AuthService) GetToken(ctx context.Context, sub string, restClaims map[
 	maps.Copy(claim, restClaims)
 
 	token, err := as.tokenizer.GetToken(claim)
-
 	if err != nil {
-		return &models.Token{}, err
+		return &models.Token{}, errFmt.Format(err)
 	}
 
 	refreshClaim := map[string]any{
@@ -152,9 +159,8 @@ func (as *AuthService) GetToken(ctx context.Context, sub string, restClaims map[
 	}
 
 	refreshToken, err := as.tokenizer.GetToken(refreshClaim)
-
 	if err != nil {
-		return &models.Token{}, err
+		return &models.Token{}, errFmt.Format(err)
 	}
 
 	return &models.Token{
@@ -164,10 +170,12 @@ func (as *AuthService) GetToken(ctx context.Context, sub string, restClaims map[
 }
 
 func (as *AuthService) CheckToken(ctx context.Context, token string) (bool, error) {
-	claims, err := as.tokenizer.VerifyToken(token)
+	const op = "auth.CheckToken"
+	errFmt := errfmt.NewOpErrorFormatter(op)
 
+	claims, err := as.tokenizer.VerifyToken(token)
 	if err != nil {
-		return false, err
+		return false, errFmt.Format(err)
 	}
 
 	userID := claims["sub"].(string)
@@ -175,39 +183,39 @@ func (as *AuthService) CheckToken(ctx context.Context, token string) (bool, erro
 	storedToken, err := as.sessionStorage.GetAccessToken(userID)
 
 	if err != nil {
-		return false, errors.New("session not found")
+		return false, ErrSessionNotFound
 	}
 
 	if claims["exp"].(float64) < float64(time.Now().Unix()) || storedToken != token {
-		return false, errors.New("token expired")
+		return false, ErrTokenExpired
 	}
 
 	return true, nil
 }
 
 func (as *AuthService) RefreshToken(ctx context.Context, passedRefreshToken string) (*models.Token, error) {
-	claims, err := as.tokenizer.VerifyToken(passedRefreshToken)
+	const op = "auth.RefreshToken"
+	errFmt := errfmt.NewOpErrorFormatter(op)
 
+	claims, err := as.tokenizer.VerifyToken(passedRefreshToken)
 	if err != nil {
-		return &models.Token{}, err
+		return &models.Token{}, errFmt.Format(err)
 	}
 
 	userID := claims["sub"].(string)
 
 	accessToken, refreshToken, err := as.sessionStorage.GetSession(userID)
-
 	if err != nil {
-		return &models.Token{}, err
+		return &models.Token{}, errFmt.Format(err)
 	}
 
 	if passedRefreshToken != refreshToken {
-		return &models.Token{}, ErrInvalidToken
+		return &models.Token{}, errFmt.Format(ErrInvalidToken)
 	}
 
 	claims, err = as.tokenizer.VerifyToken(accessToken)
-
 	if err != nil {
-		return &models.Token{}, err
+		return &models.Token{}, errFmt.Format(err)
 	}
 
 	tokens, err := as.GetToken(ctx, userID, map[string]any{
@@ -215,13 +223,12 @@ func (as *AuthService) RefreshToken(ctx context.Context, passedRefreshToken stri
 	})
 
 	if err != nil {
-		return &models.Token{}, err
+		return &models.Token{}, errFmt.Format(err)
 	}
 
 	err = as.sessionStorage.CreateSession(userID, tokens.AccessToken, tokens.RefreshToken)
-
 	if err != nil {
-		return &models.Token{}, err
+		return &models.Token{}, errFmt.Format(err)
 	}
 
 	return &models.Token{

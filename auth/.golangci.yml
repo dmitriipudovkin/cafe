@@ -7,7 +7,7 @@ linters:
   enable:
     - errcheck
     - goconst
-    # - gosec
+    - gosec
     - govet
     - ineffassign
     - staticcheck
@@ -37,12 +37,12 @@ linters:
     - asciicheck
     - testableexamples
     - protogetter
-    # - gocritic
+    - gocritic
     - tparallel
     - musttag
     - gomodguard
     - errorlint
-    # - gochecknoglobals
+    - gochecknoglobals
     - gochecknoinits
     - misspell
     - prealloc

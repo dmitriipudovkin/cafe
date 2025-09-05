@@ -6,8 +6,6 @@ import (
 
 type Logger = logrus.Logger
 
-var logger = logrus.New()
-
-func GetLogger() *logrus.Logger {
-	return logger
+func NewLogger() *logrus.Logger {
+	return logrus.New()
 }

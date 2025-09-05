@@ -20,7 +20,7 @@ func main() {
 
 	cfg := config.MustLoad()
 
-	logger := logger.GetLogger()
+	logger := logger.NewLogger()
 	logger.Info("Starting auth service")
 
 	application := app.New(logger, cfg)
@@ -32,5 +32,11 @@ func main() {
 
 	<-stop
 
-	application.Stop()
+	err = application.Stop()
+
+	if err != nil {
+		logger.Fatal(err)
+		os.Exit(1)
+	}
+	logger.Info("Stopping auth service")
 }

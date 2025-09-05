@@ -1,7 +1,7 @@
 package hash
 
 import (
-	"crypto/sha1"
+	"crypto/sha256"
 )
 
 type HasherInterface interface {
@@ -17,7 +17,7 @@ func NewHasher(salt string) *Hasher {
 }
 
 func (h *Hasher) Hash(str string) (string, error) {
-	hash := sha1.New()
+	hash := sha256.New()
 	if _, err := hash.Write([]byte(str)); err != nil {
 		return "", err
 	}

@@ -3,6 +3,7 @@ package userStorage
 import (
 	"auth/internal/lib/logger"
 	"database/sql"
+	"errors"
 	"fmt"
 	"path/filepath"
 
@@ -49,7 +50,7 @@ func NewMigrator(db *sql.DB, l *logger.Logger) (*Migrator, error) {
 }
 
 func (m *Migrator) Up() error {
-	if err := m.m.Up(); err != nil && err != migrate.ErrNoChange {
+	if err := m.m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
 		return fmt.Errorf("failed to apply migrations: %w", err)
 	}
 	m.l.Info("Migrations applied successfully")
@@ -57,7 +58,7 @@ func (m *Migrator) Up() error {
 }
 
 func (m *Migrator) Down() error {
-	if err := m.m.Down(); err != nil && err != migrate.ErrNoChange {
+	if err := m.m.Down(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
 		return fmt.Errorf("failed to revert migrations: %w", err)
 	}
 	m.l.Info("Migrations reverted successfully")

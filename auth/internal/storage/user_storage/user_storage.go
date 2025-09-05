@@ -8,7 +8,6 @@ import (
 	"database/sql"
 	"errors"
 	"os"
-	"path/filepath"
 
 	"github.com/google/uuid"
 	// _ "github.com/mattn/go-sqlite3"
@@ -50,9 +49,8 @@ func New(dbOptions UserStorageOptions, logger *logger.Logger, hasher *hash.Hashe
 	formatter := errfmt.NewOpErrorFormatter(op)
 
 	// Ensure parent directory exists
-	dir := filepath.Dir(dbOptions.DBPath)
-	if err := os.MkdirAll(dir, FileMod); err != nil {
-		logger.Fatal(formatter.Format(err, "failed to create directory: %s", dir))
+	if err := createParentDir(dbOptions.DBPath); err != nil {
+		logger.Fatal(formatter.Format(err))
 		os.Exit(1)
 	}
 
@@ -62,28 +60,18 @@ func New(dbOptions UserStorageOptions, logger *logger.Logger, hasher *hash.Hashe
 		os.Exit(1)
 	}
 
-	migrator, err := NewMigrator(db, logger)
-
-	if err != nil {
-		logger.Fatal(formatter.Format(err, "failed to create migrator"))
+	if err := runMigrations(db, logger); err != nil {
+		logger.Fatal(formatter.Format(err))
 		os.Exit(1)
 	}
 
-	// Применяем миграции
-	if err := migrator.Up(); err != nil {
-		logger.Fatal(formatter.Format(err, "failed to apply migrations"))
-	}
-
-	// Закрываем мигратор после применения миграций
-	if err := migrator.Close(); err != nil {
-		logger.Fatal(formatter.Format(err, "failed to close migrator"))
+	// Close initial connection as it might have been closed by migrator
+	if err := db.Close(); err != nil {
+		logger.Fatal(formatter.Format(err, "failed to close database"))
 		os.Exit(1)
 	}
 
-	// Закрываем первоначальное соединение, так как оно могло быть закрыто мигратором
-	db.Close()
-
-	// Открываем новое соединение для UserStorage
+	// Open new connection for UserStorage
 	db, err = sql.Open("sqlite", dbOptions.DBPath)
 	if err != nil {
 		logger.Fatal(formatter.Format(err, "failed to reopen database: %s", dbOptions.DBPath))
@@ -92,22 +80,9 @@ func New(dbOptions UserStorageOptions, logger *logger.Logger, hasher *hash.Hashe
 
 	res := &UserStorage{db: db, logger: logger, hasher: hasher}
 
-	// Create admin if not exist
-	var adminExists bool
-	err = db.QueryRow("SELECT EXISTS(SELECT 1 FROM users WHERE is_admin = TRUE)").Scan(&adminExists)
-	if err != nil {
+	if err := createAdminIfNotExists(res, dbOptions, logger); err != nil {
 		logger.Fatal(formatter.Format(err))
 		os.Exit(1)
-	} else if !adminExists {
-		logger.Info("Creating admin")
-		err = res.CreateUser(db, dbOptions.AdminLogin, dbOptions.AdminPassword, true)
-
-		if err != nil {
-			logger.Fatal(formatter.Format(err))
-			os.Exit(1)
-		}
-	} else {
-		logger.Info("Admin already exists")
 	}
 
 	return res, nil
